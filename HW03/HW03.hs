@@ -34,15 +34,28 @@ type State = String -> Int
 -- Exercise 1 -----------------------------------------
 
 extend :: State -> String -> Int -> State
-extend = undefined
+extend s k v = (\k' -> if k == k' then v else s k')
 
 empty :: State
-empty = undefined
+empty = const 0
 
 -- Exercise 2 -----------------------------------------
 
 evalE :: State -> Expression -> Int
-evalE = undefined
+evalE s (Var var)            = s var
+evalE _ (Val i)              = i
+evalE s (Op lexpr bop rexpr) = evalBop bop (evalE s lexpr) (evalE s rexpr)
+
+evalBop :: Bop -> Int -> Int -> Int
+evalBop Plus x y   = x + y
+evalBop Minus x y  = x - y
+evalBop Times x y  = x * y
+evalBop Divide x y = x `div` y
+evalBop Gt x y     = if x > y then 1 else 0
+evalBop Ge x y     = if x >= y then 1 else 0
+evalBop Lt x y     = if x < y then 1 else 0
+evalBop Le x y     = if x <= y then 1 else 0
+evalBop Eql x y    = if x == y then 1 else 0
 
 -- Exercise 3 -----------------------------------------
 
@@ -54,16 +67,33 @@ data DietStatement = DAssign String Expression
                      deriving (Show, Eq)
 
 desugar :: Statement -> DietStatement
-desugar = undefined
-
+desugar (Assign s e)            = DAssign s e
+desugar (Incr s)                = DAssign s (Op (Var s) Plus (Val 1))
+desugar (If e t f)              = DIf e (desugar t) (desugar f)
+desugar (While expr stmt)       = DWhile expr (desugar stmt)
+desugar (For ini test upd body) =
+    DSequence
+        (desugar ini)
+        (DWhile
+            test
+            (DSequence (desugar body) (desugar upd)))
+desugar (Sequence fst snd)      = DSequence (desugar fst) (desugar snd)
+desugar Skip                    = DSkip
 
 -- Exercise 4 -----------------------------------------
 
 evalSimple :: State -> DietStatement -> State
-evalSimple = undefined
+evalSimple s (DAssign name expr) = extend s name (evalE s expr)
+evalSimple s (DIf test iftrue iffalse) = if (evalE s test) /= 0
+    then evalSimple s iftrue
+    else evalSimple s iffalse
+evalSimple s (DWhile expr stmt) = if (evalE s expr) /= 0
+    then evalSimple s (DSequence stmt (DWhile expr stmt))
+    else s
+evalSimple s (DSequence stmt1 stmt2) = evalSimple (evalSimple s stmt1) stmt2
 
 run :: State -> Statement -> State
-run = undefined
+run s stmt = evalSimple s (desugar stmt)
 
 -- Programs -------------------------------------------
 
