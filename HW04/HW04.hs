@@ -38,7 +38,7 @@ instance (Num a, Eq a, Show a) => Show (Poly a) where
 
 plus :: Num a => Poly a -> Poly a -> Poly a
 plus (P l) (P r) = P $ zipWith (+) (pad l) (pad r)
-    where pad xs = xs ++ (take (longer - (length xs)) $ repeat 0)
+    where pad xs = xs ++ (take (longer - (length xs)) $ replicate 0)
           longer = max (length l) (length r)
 
 -- Exercise 5 -----------------------------------------
